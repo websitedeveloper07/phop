@@ -8,7 +8,7 @@ app = Flask(__name__)
 # --- CONFIGURATION ---
 PHP_SCRIPT_PATH = "gateway_cli.php"  # Hardcoded PHP script path
 ALLOWED_API_KEYS = ["rockysoon"]     # Hardcoded API keys
-STRIPE_SECRET_KEY = "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"  # Hardcoded Stripe key
+STRIPE_SECRET_KEY = "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"  # Hardcoded Stripe key
 
 # --- API ROUTE ---
 @app.route('/gateway=skbased/key=<api_key>', methods=['GET'])
