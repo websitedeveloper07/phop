@@ -116,7 +116,6 @@ $type = $fim['type'] ?? 'N/A';
 
 curl_close($ch);
 
-<?php
 
 // --- RESPONSE LOGIC ---
 
