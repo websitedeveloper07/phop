@@ -5,7 +5,7 @@ date_default_timezone_set('UTC'); // safer for Docker
 
 // --- VALIDATE COMMAND-LINE ARGUMENTS ---
 if (!isset($argv[1]) || !isset($argv[2])) {
-    die("Error: Missing Stripe key or CC list arguments.");
+    die("Error: Missing Stripe key or CC list arguments.\n");
 }
 
 // --- RECEIVE DATA ---
@@ -19,6 +19,7 @@ function multiexplode($delimiters, $string) {
 }
 
 function GetStr($string, $start, $end) {
+    if (!is_string($string)) return "";
     if (strpos($string, $start) === false || strpos($string, $end) === false) return "";
     $str = explode($start, $string);
     $str = explode($end, $str[1]);
@@ -42,7 +43,6 @@ curl_close($ch_user);
 
 $name = 'John';
 $last = 'Doe';
-
 if ($get) {
     preg_match_all('/"first":"(.*?)"/i', $get, $matches1);
     preg_match_all('/"last":"(.*?)"/i', $get, $matches2);
@@ -62,7 +62,15 @@ curl_setopt($ch, CURLOPT_USERPWD, $sk . ':');
 
 // --- CREATE SOURCE ---
 curl_setopt($ch, CURLOPT_URL, 'https://api.stripe.com/v1/sources');
-curl_setopt($ch, CURLOPT_POSTFIELDS, 'type=card&owner[name]='.$name.'+'.$last.'&card[number]='.$cc.'&card[cvc]='.$cvv.'&card[exp_month]='.$mes.'&card[exp_year]='.$ano);
+curl_setopt($ch, CURLOPT_POST, 1);
+curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+    'type' => 'card',
+    'owner[name]' => $name . ' ' . $last,
+    'card[number]' => $cc,
+    'card[cvc]' => $cvv,
+    'card[exp_month]' => $mes,
+    'card[exp_year]' => $ano
+]));
 $result1 = curl_exec($ch);
 $s = json_decode($result1, true);
 $token = $s['id'] ?? null;
@@ -71,8 +79,10 @@ $token = $s['id'] ?? null;
 $token3 = null;
 if ($token) {
     curl_setopt($ch, CURLOPT_URL, 'https://api.stripe.com/v1/customers');
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'description='.$name.' '.$last.'&source='.$token);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+        'description' => $name . ' ' . $last,
+        'source' => $token
+    ]));
     $result2 = curl_exec($ch);
     $cus = json_decode($result2, true);
     $token3 = $cus['id'] ?? null;
@@ -84,7 +94,11 @@ if ($token) {
 $chtoken = null;
 if ($token3) {
     curl_setopt($ch, CURLOPT_URL, 'https://api.stripe.com/v1/charges');
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'amount=50&currency=usd&customer='.$token3);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+        'amount' => 50,
+        'currency' => 'usd',
+        'customer' => $token3
+    ]));
     $result3 = curl_exec($ch);
     $char = json_decode($result3, true);
     $chtoken = $char['id'] ?? null;
@@ -95,13 +109,16 @@ if ($token3) {
 // --- CREATE REFUND ---
 if ($chtoken) {
     curl_setopt($ch, CURLOPT_URL, 'https://api.stripe.com/v1/refunds');
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'charge='.$chtoken.'&amount=50&reason=requested_by_customer');
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+        'charge' => $chtoken,
+        'amount' => 50,
+        'reason' => 'requested_by_customer'
+    ]));
     $result4 = curl_exec($ch);
 }
 
 // --- BIN LOOKUP ---
 $cctwo = substr($cc, 0, 6);
-
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, 'https://lookup.binlist.net/'.$cctwo);
 curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
@@ -113,7 +130,7 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 $fim = curl_exec($ch);
-$fim = json_decode($fim,true);
+$fim = is_string($fim) ? json_decode($fim, true) : [];
 
 // --- SAFELY EXTRACT BIN INFO ---
 $bank    = $fim['bank']['name'] ?? 'Unknown';
@@ -123,6 +140,12 @@ $type    = strtolower($fim['type'] ?? 'debit') === 'credit' ? 'Credit' : 'Debit'
 echo "Bank: $bank\n";
 echo "Country: $country\n";
 echo "Type: $type\n";
+
+// --- PRINT STRIPE RESULTS ---
+echo "Source Token: " . ($token ?? 'None') . "\n";
+echo "Customer ID: " . ($token3 ?? 'None') . "\n";
+echo "Charge ID: " . ($chtoken ?? 'None') . "\n";
+
 
 
 // --- RESPONSE LOGIC ---
