@@ -8,8 +8,7 @@ ini_set('display_startup_errors', 1);
 // --- SET DEFAULT TIMEZONE ---
 date_default_timezone_set('UTC');
 
-// --- REQUIRE STRIPE PHP SDK ---
-require 'vendor/autoload.php'; // make sure you have installed stripe-php via composer
+
 
 // --- RECEIVE DATA FROM CLI OR GET ---
 $sk = $argv[1] ?? ($_GET['sk_key'] ?? null);
