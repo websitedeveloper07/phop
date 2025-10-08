@@ -8,8 +8,6 @@ ini_set('display_startup_errors', 1);
 // --- SET DEFAULT TIMEZONE ---
 date_default_timezone_set('UTC');
 
-
-
 // --- RECEIVE DATA FROM CLI OR GET ---
 $sk = $argv[1] ?? ($_GET['sk_key'] ?? null);
 $lista = $argv[2] ?? ($_GET['cc'] ?? null);
@@ -22,6 +20,15 @@ if (!$sk || !$lista) {
 function multiexplode($delimiters, $string) {
     $one = str_replace($delimiters, $delimiters[0], $string);
     return explode($delimiters[0], $one);
+}
+
+function GetStr($string, $start, $end) {
+    if (strpos($string, $start) === false || strpos($string, $end) === false) {
+        return "";
+    }
+    $str = explode($start, $string);
+    $str = explode($end, $str[1]);
+    return $str[0];
 }
 
 // --- PARSE CC DATA ---
@@ -52,62 +59,66 @@ if ($get) {
     $last = $matches2[1][0] ?? 'Doe';
 }
 
-// --- STRIPE SETUP ---
-\Stripe\Stripe::setApiKey($sk);
+// --- STRIPE API CALLS ---
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+curl_setopt($ch, CURLOPT_USERPWD, $sk . ':');
 
-$result1 = $result2 = $result3 = $result4 = "{}";
-$token = null;
-$customer = null;
-$charge_id = null;
+// --- CREATE SOURCE ---
+curl_setopt($ch, CURLOPT_URL, 'https://api.stripe.com/v1/sources');
+curl_setopt($ch, CURLOPT_POST, 1);
+curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+    'type' => 'card',
+    'owner[name]' => "$name $last",
+    'card[number]' => $cc,
+    'card[cvc]' => $cvv,
+    'card[exp_month]' => $mes,
+    'card[exp_year]' => $ano
+]));
+$result1 = curl_exec($ch);
+$s = json_decode($result1, true);
+$token = $s['id'] ?? null;
 
-try {
-    // --- CREATE TOKEN ---
-    $tokenObj = \Stripe\Token::create([
-        'card' => [
-            'number' => $cc,
-            'exp_month' => $mes,
-            'exp_year' => $ano,
-            'cvc' => $cvv,
-            'name' => "$name $last"
-        ]
-    ]);
-    $token = $tokenObj->id;
-    $result1 = json_encode($tokenObj, JSON_PRETTY_PRINT);
+// --- CREATE CUSTOMER ---
+$result2 = "{}";
+$token3 = null;
+if ($token) {
+    curl_setopt($ch, CURLOPT_URL, 'https://api.stripe.com/v1/customers');
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+        'description' => "$name $last",
+        'source' => $token
+    ]));
+    $result2 = curl_exec($ch);
+    $cus = json_decode($result2, true);
+    $token3 = $cus['id'] ?? null;
+}
 
-    // --- CREATE CUSTOMER ---
-    if ($token) {
-        $customerObj = \Stripe\Customer::create([
-            'description' => "$name $last",
-            'source' => $token
-        ]);
-        $customer = $customerObj->id;
-        $result2 = json_encode($customerObj, JSON_PRETTY_PRINT);
-    }
+// --- CREATE CHARGE ---
+$result3 = "{}";
+$chtoken = null;
+if ($token3) {
+    curl_setopt($ch, CURLOPT_URL, 'https://api.stripe.com/v1/charges');
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+        'amount' => 50,
+        'currency' => 'usd',
+        'customer' => $token3
+    ]));
+    $result3 = curl_exec($ch);
+    $chtoken = trim(strip_tags(GetStr($result3, '"id": "','"')));
+}
 
-    // --- CREATE CHARGE ---
-    if ($customer) {
-        $chargeObj = \Stripe\Charge::create([
-            'amount' => 50, // in cents
-            'currency' => 'usd',
-            'customer' => $customer
-        ]);
-        $charge_id = $chargeObj->id ?? null;
-        $result3 = json_encode($chargeObj, JSON_PRETTY_PRINT);
-    }
-
-    // --- CREATE REFUND ---
-    if ($charge_id) {
-        $refundObj = \Stripe\Refund::create([
-            'charge' => $charge_id,
-            'amount' => 50,
-            'reason' => 'requested_by_customer'
-        ]);
-        $result4 = json_encode($refundObj, JSON_PRETTY_PRINT);
-    }
-
-} catch (\Stripe\Exception\ApiErrorException $e) {
-    $error = $e->getJsonBody();
-    $result1 = json_encode($error, JSON_PRETTY_PRINT);
+// --- CREATE REFUND ---
+$result4 = "{}";
+if ($chtoken) {
+    curl_setopt($ch, CURLOPT_URL, 'https://api.stripe.com/v1/refunds');
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+        'charge' => $chtoken,
+        'amount' => 50,
+        'reason' => 'requested_by_customer'
+    ]));
+    $result4 = curl_exec($ch);
 }
 
 // --- BIN LOOKUP ---
@@ -124,11 +135,13 @@ $bank = $fim['bank']['name'] ?? 'N/A';
 $country = $fim['country']['alpha2'] ?? 'N/A';
 $type = $fim['type'] ?? 'N/A';
 
+curl_close($ch);
+
 // --- FULL DEBUG OUTPUT ---
 echo "<pre>";
 echo "=== DEBUG OUTPUT ===\n";
 echo "Card: $lista\n";
-echo "Stripe Token (Result1): $result1\n";
+echo "Stripe Source (Result1): $result1\n";
 echo "Stripe Customer (Result2): $result2\n";
 echo "Stripe Charge (Result3): $result3\n";
 echo "Stripe Refund (Result4): $result4\n";
@@ -148,4 +161,5 @@ if (strpos($result3, '"status": "succeeded"') !== false) {
 } else {
     echo "<span class='badge badge-danger'>#Declined</span> ◈ <span class='badge badge-danger'>$lista</span> ◈ <span class='badge badge-warning'> 「An Unknown Error Occurred ❓」</span> ◈<span class='badge badge-info'> 「 $bank ($country) - $type 」 </span>";
 }
+
 ?>
