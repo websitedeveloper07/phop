@@ -1,25 +1,29 @@
 # 1. Base image with Python and PHP
 FROM python:3.12-slim
 
-# Install PHP and other needed utilities
+# 2. Install PHP CLI and utilities
 RUN apt-get update && \
-    apt-get install -y php-cli && \
+    apt-get install -y php-cli curl unzip && \
     rm -rf /var/lib/apt/lists/*
 
-# 2. Set working directory
+# 3. Set working directory
 WORKDIR /app
 
-# 3. Copy project files
+# 4. Copy project files
 COPY . /app
 
-# 4. Install Python dependencies
+# 5. Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 5. Expose port (Render sets PORT in env)
+# 6. Expose port (Render will assign $PORT)
 EXPOSE 5000
 
-# 6. Set environment variable for Python
+# 7. Set environment variable for Python buffering
 ENV PYTHONUNBUFFERED=1
 
-# 7. Run the Flask app with Gunicorn
-CMD ["gunicorn", "app:app", "-b", "0.0.0.0:5000"]
+# 8. Use an entrypoint script to dynamically use $PORT
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# 9. Run the Flask app with Gunicorn via entrypoint
+ENTRYPOINT ["/app/entrypoint.sh"]
