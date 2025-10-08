@@ -12,18 +12,18 @@ WORKDIR /app
 # 4. Copy project files
 COPY . /app
 
-# 5. Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# 5. Install Python dependencies including Gunicorn
+RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
-# 6. Expose port (Render will assign $PORT)
+# 6. Expose port (Render sets PORT in env)
 EXPOSE 5000
 
-# 7. Set environment variable for Python buffering
+# 7. Set environment variable for Python
 ENV PYTHONUNBUFFERED=1
 
-# 8. Use an entrypoint script to dynamically use $PORT
+# 8. Copy entrypoint
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# 9. Run the Flask app with Gunicorn via entrypoint
+# 9. Run the Flask app with entrypoint
 ENTRYPOINT ["/app/entrypoint.sh"]
