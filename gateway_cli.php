@@ -116,70 +116,159 @@ $type = $fim['type'] ?? 'N/A';
 
 curl_close($ch);
 
-
 // --- RESPONSE LOGIC ---
-
-if (strpos($result3, '"seller_message": "Payment complete."') !== false) {
-    echo '<span class="badge badge-success">#Approved</span> ◈ <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Approved (CVV) @cc_checker charge + refund 」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
-} 
-elseif (strpos($result3,'"cvc_check": "pass"') !== false) {
-    echo '<span class="badge badge-success">#Approved</span> ◈ <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Approved (CVV) CHARGED BC 」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
+if(strpos($result3, '"seller_message": "Payment complete."' )) {
+    echo '<span class="badge badge-success">#Approved</span> ◈ </span> </span> <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Approved (͏CVV) @cc_checker charge + refund 」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
 }
-elseif (strpos($result1, "generic_decline") !== false) {
-    echo '<span class="badge badge-danger">#Declined</span> ◈ <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Declined : Generic_Decline @cc_checker」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
-} 
-elseif (strpos($result3, "generic_decline") !== false) {
-    echo '<span class="badge badge-success">#DEAD</span> ◈ <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「DECLINE GENERIC 3 @cc_checker」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
-} 
-elseif (strpos($result3, "insufficient_funds") !== false) {
-    echo '<span class="badge badge-success">#DECLINE</span> ◈ <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Approved (CVV - INSUFFICIENT FUND3 @cc_checker)」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
-} 
-elseif (strpos($result3, "fraudulent") !== false) {
-    echo '<span class="badge badge-success">#DECLINE</span> ◈ <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Approved fraudulent @cc_checker」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
-} 
-elseif (strpos($result3, "do_not_honor") !== false || strpos($result2, "do_not_honor") !== false) {
-    echo '<span class="badge badge-success">#DEAD</span> ◈ <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「DECLINE DO NOT HONOR 3 @cc_checker」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
-} 
-elseif (strpos($result2,'"code": "incorrect_cvc"') !== false || strpos($result1, '"code": "invalid_cvc"') !== false) {
-    echo '<span class="badge badge-info">#Approved</span> ◈ <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-success"> 「CCN 2 @cc_checker」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
-} 
-elseif (strpos($result2,"invalid_account") !== false) {
-    echo '<span class="badge badge-danger">#DECLINE</span> ◈ <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-danger"> 「invalid_account @cc_checker」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
-} 
-elseif (strpos($result2,"lost_card") !== false || strpos($result3,"lost_card") !== false) {
-    echo '<span class="badge badge-success">#DECLINE</span> ◈ <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Lost Card @cc_checker」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
-} 
-elseif (strpos($result2,"stolen_card") !== false || strpos($result3,"stolen_card") !== false) {
-    echo '<span class="badge badge-success">#DECLINE</span> ◈ <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Stolen Card @cc_checker」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
-} 
-elseif (strpos($result2,"transaction_not_allowed") !== false) {
-    echo '<span class="badge badge-success">#DECLINE</span> ◈ <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Declined (transaction_not_allowed) @cc_checker」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
-} 
-elseif (strpos($result2,"pickup_card") !== false || strpos($result3,"pickup_card") !== false) {
-    echo '<span class="badge badge-danger">#decline</span> ◈ <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Pickup Card (Reported Stolen Or Lost) @cc_checker」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
-} 
-elseif (strpos($result2,'Your card has expired.') !== false || strpos($result3,'Your card has expired.') !== false) {
-    echo '<span class="badge badge-danger">#Decline</span> ◈ <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Expired Card @cc_checker」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
-} 
-elseif (strpos($result3,'"code": "processing_error"') !== false || strpos($result2,'"code": "processing_error"') !== false) {
-    echo '<span class="badge badge-danger">#Declined</span> ◈ <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「PROCESSING ERROR @cc_checker」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
-} 
-elseif (strpos($result3,'"cvc_check": "unchecked"') !== false || strpos($result2,'"cvc_check": "unchecked"') !== false) {
-    echo '<span class="badge badge-danger">#Declined</span> ◈ <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「CVC_Unchecked : Proxy Error @cc_checker」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
-} 
-elseif (strpos($result3,'"cvc_check": "fail"') !== false || strpos($result2,'"cvc_check": "fail"') !== false) {
-    echo '<span class="badge badge-danger">#Declined</span> ◈ <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「CVC_Unchecked : Fail @cc_checker」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
-} 
-elseif (strpos($result3,'"cvc_check": "unavailable"') !== false) {
-    echo '<span class="badge badge-danger">#Declined</span> ◈ <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「CVC_Check : Unavailable @cc_checker」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
-} 
-elseif (strpos($result,'Your card does not support this type of purchase.') !== false) {
-    echo '<span class="badge badge-danger">#Declined</span> ◈ <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Card Doesnt Support Purchase @cc_checker」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
-} 
-else {
-    echo '<span class="badge badge-danger">#Declined</span> ◈ <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Dead Proxy/Error Not listed @cc_checker」</span> ◈ <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span></br>';
-    echo $result1;
-    echo $result2;
+elseif(strpos($result3,'"cvc_check": "pass"')){
+    echo '<span class="badge badge-success">#Approved</span> ◈ </span> </span> <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Approved (͏CVV) CHARGED BC 」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+
 }
 
+
+elseif(strpos($result1, "generic_decline")) {
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Declined : Generic_Decline @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+    }
+elseif(strpos($result3, "generic_decline" )) {
+    echo '<span class="badge badge-success">#DEAD</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「DECLINE GENERIC 3 @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
+elseif(strpos($result3, "insufficient_funds" )) {
+    echo '<span class="badge badge-success">#DECLINE</span> ◈ </span> </span> <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Approved (͏CVV - INSUFFICIENT FUND3  @cc_checker)」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
+
+elseif(strpos($result3, "fraudulent" )) {
+    echo '<span class="badge badge-success">#DECLINE</span> ◈ </span> </span> <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Approved fraudulent @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
+elseif(strpos($resul3, "do_not_honor" )) {
+    echo '<span class="badge badge-success">#DEAD</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「DECLINE DO NOT HONOR 3 @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+    }
+elseif(strpos($resul2, "do_not_honor" )) {
+    echo '<span class="badge badge-success">#DEAD</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「DECLINE DO NOT HONOR 3 @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
+elseif(strpos($result,"fraudulent")){
+    echo '<span class="badge badge-success">#Approved</span> ◈ </span> </span> <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Fraudulent Card @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+
+}
+
+elseif(strpos($result2,'"code": "incorrect_cvc"')){
+    echo '<span class="badge badge-info">#Approved</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-success"> 「CCN 2 @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
+elseif(strpos($result1,' "code": "invalid_cvc"')){
+    echo '<span class="badge badge-info">#Approved</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-success"> 「CCN 2 @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
+elseif(strpos($result2,"invalid_account")){
+    echo '<span class="badge badge-danger">#DECLINE</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-danger"> 「invalid_account @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+
+}
+
+elseif(strpos($result2, "do_not_honor")) {
+    echo '<span class="badge badge-danger">#DECLINE</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「DO NOT HONOR 2 @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
+elseif(strpos($result2, "lost_card" )) {
+    echo '<span class="badge badge-success">#DECLINE</span> ◈ </span> </span> <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> GAY「Lost Card @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
+elseif(strpos($result3, "lost_card" )) {
+    echo '<span class="badge badge-success">#DECLINE</span> ◈ </span> </span> <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Lost Card @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
+
+elseif(strpos($result2, "stolen_card" )) {
+    echo '<span class="badge badge-success">#DECLINE</span> ◈ </span> </span> <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Stolen Card @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+    }
+
+elseif(strpos($result3, "stolen_card" )) {
+    echo '<span class="badge badge-success">#decline</span> ◈ </span> </span> <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Stolen Card @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+
+
+}
+elseif(strpos($result2, "transaction_not_allowed" )) {
+    echo '<span class="badge badge-success">#DECLINE</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Declined (transaction_not_allowed) @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+    }
+elseif(strpos($result3, "incorrect_cvc" )) {
+    echo '<span class="badge badge-success">#Approved</span> ◈ </span> </span> <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Approved (CCN3) @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
+elseif(strpos($result2, "pickup_card" )) {
+    echo '<span class="badge badge-danger">#decline</span> ◈ </span> </span> <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Pickup Card (Reported Stolen Or Lost) @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
+elseif(strpos($result3, "pickup_card" )) {
+    echo '<span class="badge badge-danger">#decline</span> ◈ </span> </span> <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Pickup Card (Reported Stolen Or Lost) @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+
+}
+elseif(strpos($result2, 'Your card has expired.')) {
+    echo '<span class="badge badge-danger">#Decline</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Expired Card @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
+elseif(strpos($result3, 'Your card has expired.')) {
+    echo '<span class="badge badge-danger">#decline</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Expired Card @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+
+}
+elseif(strpos($result3, '"code": "processing_error"')) {
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「PROCESSING ERROR @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+    }
+elseif(strpos($result3, ' "message": "Your card number is incorrect."')) {
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Your card number is incorrect @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+    }
+elseif(strpos($result3, '"decline_code": "service_not_allowed"')) {
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「service_not_allowed @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+    }
+elseif(strpos($result2, '"code": "processing_error"')) {
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> gay「PROCESSING ERROR @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+    }
+elseif(strpos($result2, ' "message": "Your card number is incorrect."')) {
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Your card number is incorrect @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+    }
+elseif(strpos($result2, '"decline_code": "service_not_allowed"')) {
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「service_not_allowed @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+
+}
+elseif(strpos($result, "incorrect_number")) {
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Incorrect Card Number @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+
+
+}elseif(strpos($result1, "do_not_honor")) {
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Declined : Do_Not_Honor @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+
+}
+elseif(strpos($result1, 'Your card was declined.')) {
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Card Declined @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+
+}
+elseif(strpos($result1, "do_not_honor")) {
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Declined : Do_Not_Honor @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+    }
+elseif(strpos($result2, "generic_decline")) {
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Declined : Generic_Decline @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
+elseif(strpos($result, 'Your card was declined.')) {
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Card Declined @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+
+}
+elseif(strpos($result3,' "decline_code": "do_not_honor"')){
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「CVC_Check : Do_Not_Honor 3 @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
+elseif(strpos($result2,'"cvc_check": "unchecked"')){
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「CVC_Unchecked : Proxy Error @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
+elseif(strpos($result2,'"cvc_check": "fail"')){
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「CVC_Unchecked : Fail @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
+elseif(strpos($result2,'"cvc_check": "unavailable"')){
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「CVC_Check : Unavailable @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
+elseif(strpos($result3,'"cvc_check": "unchecked"')){
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「CVC_Unchecked : Proxy Error @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
+elseif(strpos($result3,'"cvc_check": "fail"')){
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「CVC_Unchecked : Fail @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
+
+elseif (strpos($result,'Your card does not support this type of purchase.')) {
+    echo '<span class="badge badge-danger">#Declined</span> ◈ </span> <span class="badge badge-danger">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Card Doesnt Support Purchase @cc_checker」 </span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+    }
+
+elseif(strpos($result2,'"cvc_check": "pass"')){
+    echo '<span class="badge badge-success">#Approved</span> ◈ </span> </span> <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Approved (͏CVV) @cc_checker AUTH ONLY  」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+
+}
+elseif(strpos($result3, "fraudulent" )) {
+    echo '<span class="badge badge-success">#Declined</span> ◈ </span> </span> <span class="badge badge-success">'.$lista.'</span> ◈ <span class="badge badge-info"> 「Approved fraudulent @cc_checker」</span> ◈</span> <span class="badge badge-info"> 「 '.$bank.' ('.$country.') - '.$type.' 」 </span> </br>';
+}
 ?>
