@@ -6,30 +6,23 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 
 // --- SET DEFAULT TIMEZONE ---
-date_default_timezone_set('UTC'); // safer for Docker
+date_default_timezone_set('UTC');
 
-// --- VALIDATE COMMAND-LINE ARGUMENTS ---
-if (!isset($argv[1]) || !isset($argv[2])) {
-    die("Error: Missing Stripe key or CC list arguments.");
+// --- REQUIRE STRIPE PHP SDK ---
+require 'vendor/autoload.php'; // make sure you have installed stripe-php via composer
+
+// --- RECEIVE DATA FROM CLI OR GET ---
+$sk = $argv[1] ?? ($_GET['sk_key'] ?? null);
+$lista = $argv[2] ?? ($_GET['cc'] ?? null);
+
+if (!$sk || !$lista) {
+    die("Error: Missing Stripe key or CC list arguments.\n");
 }
-
-// --- RECEIVE DATA ---
-$sk = $argv[1];
-$lista = $argv[2];
 
 // --- HELPER FUNCTIONS ---
 function multiexplode($delimiters, $string) {
     $one = str_replace($delimiters, $delimiters[0], $string);
     return explode($delimiters[0], $one);
-}
-
-function GetStr($string, $start, $end) {
-    if (strpos($string, $start) === false || strpos($string, $end) === false) {
-        return "";
-    }
-    $str = explode($start, $string);
-    $str = explode($end, $str[1]);
-    return $str[0];
 }
 
 // --- PARSE CC DATA ---
@@ -38,6 +31,10 @@ $cc = $cc_parts[0] ?? '';
 $mes = $cc_parts[1] ?? '';
 $ano = $cc_parts[2] ?? '';
 $cvv = $cc_parts[3] ?? '';
+
+if (!$cc || !$mes || !$ano || !$cvv) {
+    die("Error: Invalid CC format.\n");
+}
 
 // --- RANDOM USER DATA ---
 $ch_user = curl_init();
@@ -49,7 +46,6 @@ curl_close($ch_user);
 
 $name = 'John';
 $last = 'Doe';
-
 if ($get) {
     preg_match_all('/"first":"(.*?)"/i', $get, $matches1);
     preg_match_all('/"last":"(.*?)"/i', $get, $matches2);
@@ -57,52 +53,65 @@ if ($get) {
     $last = $matches2[1][0] ?? 'Doe';
 }
 
-// --- STRIPE API CALLS ---
-$ch = curl_init();
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-curl_setopt($ch, CURLOPT_USERPWD, $sk . ':');
+// --- STRIPE SETUP ---
+\Stripe\Stripe::setApiKey($sk);
 
-// CREATE SOURCE
-curl_setopt($ch, CURLOPT_URL, 'https://api.stripe.com/v1/sources');
-curl_setopt($ch, CURLOPT_POSTFIELDS, 'type=card&owner[name]='.$name.'+'.$last.'&card[number]='.$cc.'&card[cvc]='.$cvv.'&card[exp_month]='.$mes.'&card[exp_year]='.$ano);
-$result1 = curl_exec($ch);
-$s = json_decode($result1, true);
-$token = $s['id'] ?? null;
+$result1 = $result2 = $result3 = $result4 = "{}";
+$token = null;
+$customer = null;
+$charge_id = null;
 
-// CREATE CUSTOMER
-$token3 = null;
-if ($token) {
-    curl_setopt($ch, CURLOPT_URL, 'https://api.stripe.com/v1/customers');
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'description='.$name.' '.$last.'&source='.$token);
-    $result2 = curl_exec($ch);
-    $cus = json_decode($result2, true);
-    $token3 = $cus['id'] ?? null;
-} else {
-    $result2 = "{}";
+try {
+    // --- CREATE TOKEN ---
+    $tokenObj = \Stripe\Token::create([
+        'card' => [
+            'number' => $cc,
+            'exp_month' => $mes,
+            'exp_year' => $ano,
+            'cvc' => $cvv,
+            'name' => "$name $last"
+        ]
+    ]);
+    $token = $tokenObj->id;
+    $result1 = json_encode($tokenObj, JSON_PRETTY_PRINT);
+
+    // --- CREATE CUSTOMER ---
+    if ($token) {
+        $customerObj = \Stripe\Customer::create([
+            'description' => "$name $last",
+            'source' => $token
+        ]);
+        $customer = $customerObj->id;
+        $result2 = json_encode($customerObj, JSON_PRETTY_PRINT);
+    }
+
+    // --- CREATE CHARGE ---
+    if ($customer) {
+        $chargeObj = \Stripe\Charge::create([
+            'amount' => 50, // in cents
+            'currency' => 'usd',
+            'customer' => $customer
+        ]);
+        $charge_id = $chargeObj->id ?? null;
+        $result3 = json_encode($chargeObj, JSON_PRETTY_PRINT);
+    }
+
+    // --- CREATE REFUND ---
+    if ($charge_id) {
+        $refundObj = \Stripe\Refund::create([
+            'charge' => $charge_id,
+            'amount' => 50,
+            'reason' => 'requested_by_customer'
+        ]);
+        $result4 = json_encode($refundObj, JSON_PRETTY_PRINT);
+    }
+
+} catch (\Stripe\Exception\ApiErrorException $e) {
+    $error = $e->getJsonBody();
+    $result1 = json_encode($error, JSON_PRETTY_PRINT);
 }
 
-// CREATE CHARGE
-$chtoken = null;
-if ($token3) {
-    curl_setopt($ch, CURLOPT_URL, 'https://api.stripe.com/v1/charges');
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'amount=50&currency=usd&customer='.$token3);
-    $result3 = curl_exec($ch);
-    $chtoken = trim(strip_tags(GetStr($result3, '"id": "','"')));
-} else {
-    $result3 = "{}";
-}
-
-// CREATE REFUND
-if ($chtoken) {
-    curl_setopt($ch, CURLOPT_URL, 'https://api.stripe.com/v1/refunds');
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'charge='.$chtoken.'&amount=50&reason=requested_by_customer');
-    $result4 = curl_exec($ch);
-}
-
-// BIN LOOKUP
+// --- BIN LOOKUP ---
 $cctwo = substr($cc, 0, 6);
 $ch_bin = curl_init();
 curl_setopt($ch_bin, CURLOPT_URL, 'https://lookup.binlist.net/'.$cctwo);
@@ -116,13 +125,11 @@ $bank = $fim['bank']['name'] ?? 'N/A';
 $country = $fim['country']['alpha2'] ?? 'N/A';
 $type = $fim['type'] ?? 'N/A';
 
-curl_close($ch);
-
 // --- FULL DEBUG OUTPUT ---
 echo "<pre>";
 echo "=== DEBUG OUTPUT ===\n";
 echo "Card: $lista\n";
-echo "Stripe Source (Result1): $result1\n";
+echo "Stripe Token (Result1): $result1\n";
 echo "Stripe Customer (Result2): $result2\n";
 echo "Stripe Charge (Result3): $result3\n";
 echo "Stripe Refund (Result4): $result4\n";
@@ -131,9 +138,9 @@ echo "==================\n";
 echo "</pre>";
 
 // --- RESPONSE LOGIC ---
-if (strpos($result3, '"seller_message": "Payment complete."') !== false) {
+if (strpos($result3, '"status": "succeeded"') !== false) {
     echo "<span class='badge badge-success'>#Approved</span> ◈ <span class='badge badge-success'>$lista</span> ◈ <span class='badge badge-info'> 「Approved (Charge & Refund) ✅」</span> ◈<span class='badge badge-info'> 「 $bank ($country) - $type 」 </span>";
-} elseif (strpos($result3, '"cvc_check": "pass"') !== false) {
+} elseif (strpos($result2, '"cvc_check": "pass"') !== false) {
     echo "<span class='badge badge-success'>#Approved</span> ◈ <span class='badge badge-success'>$lista</span> ◈ <span class='badge badge-info'> 「Approved (CVV Pass) ✔️」</span> ◈<span class='badge badge-info'> 「 $bank ($country) - $type 」 </span>";
 } elseif (strpos($result2, '"code": "incorrect_cvc"') !== false || strpos($result1, '"code": "invalid_cvc"') !== false) {
     echo "<span class='badge badge-success'>#Approved</span> ◈ <span class='badge badge-danger'>$lista</span> ◈ <span class='badge badge-warning'> 「CCN Live (Incorrect CVV) 🟡」</span> ◈<span class='badge badge-info'> 「 $bank ($country) - $type 」 </span>";
