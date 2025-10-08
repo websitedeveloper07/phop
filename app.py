@@ -27,20 +27,28 @@ def process_payment(api_key):
     if not sk_key:
         return jsonify({"status": "error", "message": "Missing 'sk_key' parameter"}), 400
 
-    # 3️⃣ Get the credit card list from the ?cc= query parameter
-    cc_list = request.args.get("cc", "").strip()
-    if not cc_list:
-        return jsonify({"status": "error", "message": "Missing 'cc' parameter"}), 400
+    # 3️⃣ Get the tokenized card from the ?token= query parameter (mandatory)
+    token = request.args.get("token", "").strip()
+    if not token:
+        return jsonify({"status": "error", "message": "Missing 'token' parameter"}), 400
 
-    # 4️⃣ Build the PHP command safely
+    # 4️⃣ Optional: amount (in cents)
+    amount = request.args.get("amount", "").strip()
+    if not amount:
+        amount = "50"  # default $0.50
+    if not amount.isdigit():
+        return jsonify({"status": "error", "message": "Amount must be numeric"}), 400
+
+    # 5️⃣ Build the PHP command safely
     cmd = [
         "php",
         PHP_SCRIPT_PATH,
         shlex.quote(sk_key),
-        shlex.quote(cc_list)
+        shlex.quote(token),
+        shlex.quote(amount)
     ]
 
-    # 5️⃣ Execute the PHP script
+    # 6️⃣ Execute the PHP script
     try:
         result = subprocess.run(
             cmd,
